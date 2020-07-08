@@ -4,6 +4,11 @@ Use Datadog custom check feature to automatically check if backups are handled p
 
 Reference : http://docs.datadoghq.com/guides/agent_checks/
 
+
+The script checks whether a backup exists in the path at the specified time (key_date). 
+If the key_date is in the future, it tries to find the backup of the previous day
+
+
 ## Configure directory checking backup
 
 1. Create "backup_check.yaml" file to the "/etc/dd-agent/conf.d" directory
