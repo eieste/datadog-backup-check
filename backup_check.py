@@ -1,39 +1,54 @@
-# stdlib
-from fnmatch import fnmatch
-from os import stat
-from os.path import abspath, exists, join
-from datetime import datetime, timedelta
- 
-# 3p
-from scandir import walk
- 
-# project
-from checks import AgentCheck
-from config import _is_affirmative
- 
-class BackupCheck(AgentCheck):
-    """This check is for monitoring and reporting metrics on cf backup
-    WARNING: the user/group that dd-agent runs as must have access to stat the files in the desired directory
-    Config options:
-        "directory" - string, backup directory. required
-        "name" - string, backup service name. Required
-    """
-    SOURCE_TYPE_NAME = 'system'
- 
-    def check(self, instance):
-        if "directory" not in instance:
-            raise Exception('DirectoryCheck: missing "directory" in config')
- 
-        directory = instance["directory"]
-        abs_directory = abspath(directory)
-        name = instance.get("name")
+from fnmatch import fnmatch                                                                                                                                                                                        
+from os import stat                                                                                                                                                                                                
+from os.path import abspath, exists, join                                                                                                                                                                          
+from datetime import datetime, timedelta                                                                                                                                                                           
+import logging                                                                                                                                                                                                     
+# 3p                                                                                                                                                                                                               
+from scandir import walk                                                                                                                                                                                           
+                                                                                                                                                                                                                   
+# project                                                                                                                                                                                                          
+from checks import AgentCheck                                                                                                                                                                                      
+from config import _is_affirmative                                                                                                                                                                                 
+                                                                                                                                                                                                                   
+log = logging.getLogger(__name__)                                                                                                                                                                                  
+                                                                                                                                                                                                                   
+                                                                                                                                                                                                                   
+class BackupCheck(AgentCheck):                                                                                                                                                                                     
+    """This check is for monitoring and reporting metrics on cf backup                                                                                                                                             
+    WARNING: the user/group that dd-agent runs as must have access to stat the files in the desired directory                                                                                                      
+    Config options:                                                                                                                                                                                                
+        "directory" - string, backup directory. required                                                                                                                                                           
+        "name" - string, backup service name. Required                                                                                                                                                             
+    """                                                                                                                                                                                                            
+    SOURCE_TYPE_NAME = 'system'                                                                                                                                                                                    
+                                                                                                                                                                                                                   
+    def check(self, instance):                                                                                                                                                                                     
+        if "directory" not in instance:                                                                                                                                                                            
+            raise Exception('DirectoryCheck: missing "directory" in config')                                                                                                                                       
+                                                                                                                                                                                                                   
+        directory = instance["directory"]                                                                                                                                                                          
+        abs_directory = abspath(directory)                                                                                                                                                                         
+        name = instance.get("name")                                                                                                                                                                                
+        
+        pattern_string = instance.get("pattern", "backup_%y%m%d")
+        key_date_string = instance.get("key_date", "0:0")
+        now = datetime.now()
+        key_date = datetime.strptime(instance["key_date"], "%H:%M")
+        yesterday = datetime.now() - timedelta(days=1)
+
         service_check_tags = ['name:%s' % name]
  
         if not exists(abs_directory):
             raise Exception("DirectoryCheck: the directory (%s) does not exist" % abs_directory)
         current_datetime = datetime.now()
+        
         # pattern for checking backup
-        pattern = current_datetime.strftime('*%Y%m%d*')
+      
+        if now > key_date:
+            log.debug("use yesterday")
+            pattern = yesterday.strftime(pattern_string)
+        else:
+            pattern = now.strftime(pattern_string)
         print ("pattern : %s"  % pattern)
  
         hasBackup = False
@@ -42,13 +57,13 @@ class BackupCheck(AgentCheck):
         for root, dirs, files in walk(abs_directory):
             for filename in files:
                 filename = join(root, filename)
-                print ("filename : %s"  % filename)
- 
+                log.debug("filename: %s ; pattern: %s" % (filename, pattern) )
+
                 if fnmatch(filename, pattern):
                    hasBackup = True
                    break
  
-        print ("hasBackup : %s"  %hasBackup)
+        log.info("hasBackup : %s"  %hasBackup)
   
         #check backup file size is above 0
         try:
