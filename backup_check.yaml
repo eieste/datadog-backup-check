@@ -1,3 +1,4 @@
+
 init_config:
  
 instances:
@@ -9,6 +10,10 @@ instances:
   # Instances take the following parameters:
   # "directory" - string, the directory to monitor. Required
   # "name" - string, backup service name. Required
- 
-  - directory: "/root/backup/mariadb"
-    name: "mariadb"
+  # "key_date" - the timestamp whene the backup must be exists
+  # "pattern" - which nameing of file must be exit
+
+  - directory: "/root/backup/mariadb/"
+    name: "sm2backup"
+    key_date: 04:00
+    pattern: /root/backup/mariadb/full_server/backup_%y%m%d*.tar
